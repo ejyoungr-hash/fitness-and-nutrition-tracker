@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Fitness and Nutrition Tracker</title>
+<style>
+  :root{
+    --bg:#eef1ee; --surface:#ffffff; --surface2:#f4f6f3; --ink:#1c2420; --muted:#5c6a62;
+    --line:#d8ded8; --accent:#1e6b47; --accent-ink:#ffffff; --accent-soft:#e2efe6;
+    --warn-bg:#fdf3e3; --warn-line:#e8c98a; --warn-ink:#6b4e12;
+    --danger:#b3352b; --bar:#2e7d57; --bar-empty:#d8ded8;
+    --shadow:0 1px 3px rgba(20,35,25,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#121613; --surface:#1c221e; --surface2:#232a25; --ink:#e8ede9; --muted:#a3b0a7;
+      --line:#333d36; --accent:#4fae7d; --accent-ink:#0e1a12; --accent-soft:#23382b;
+      --warn-bg:#3a2f18; --warn-line:#7a6230; --warn-ink:#ecd9a8;
+      --danger:#e07a6f; --bar:#4fae7d; --bar-empty:#333d36;
+      --shadow:0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;line-height:1.45}
+  button,[role="button"],select,summary,input:not([type="checkbox"],[type="radio"]){min-height:44px}
+  .wrap{max-width:880px;margin:0 auto;padding:16px 14px 48px}
+  h1{font-size:1.55rem;line-height:1.2;margin:6px 0 4px;font-weight:700;letter-spacing:-.01em}
+  h2{font-size:1.12rem;margin:0 0 4px;font-weight:700}
+  h3{font-size:.98rem;margin:0 0 6px;font-weight:700}
+  p{margin:0}
+  .sub{color:var(--muted);font-size:.93rem}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:14px;box-shadow:var(--shadow)}
+  .card p.hint{color:var(--muted);font-size:.88rem;margin-bottom:12px}
+
+  /* Date bar */
+  .datebar{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;margin-top:14px}
+  .datebar .navbtn{flex:0 0 auto}
+  .datebar input[type="date"]{flex:1 1 150px}
+  .datenav-label{width:100%;font-size:1.05rem;font-weight:700;margin-top:2px}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);padding:8px 14px;font-weight:600}
+  button:hover{border-color:var(--muted)}
+  button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  button.primary:hover{filter:brightness(1.07)}
+  button.ghost{background:transparent}
+  button.small{min-height:38px;padding:4px 10px;font-size:.88rem}
+  button.del{color:var(--danger);background:transparent;border-color:transparent;min-height:38px;padding:4px 8px}
+  button:disabled{opacity:.5;cursor:default}
+  input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;width:100%}
+  input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  label{display:block;font-size:.86rem;font-weight:600;margin-bottom:5px}
+  .grid{display:grid;gap:12px}
+  .grid.c2{grid-template-columns:1fr 1fr}
+  .grid.c3{grid-template-columns:1fr 1fr 1fr}
+  @media (max-width:560px){.grid.c2,.grid.c3{grid-template-columns:1fr}}
+  .field{margin-bottom:12px}
+
+  /* Summary strip */
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  @media (max-width:560px){.summary{grid-template-columns:1fr 1fr 1fr;gap:8px}}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;box-shadow:var(--shadow)}
+  .stat .num{font-size:1.35rem;font-weight:800;line-height:1.1}
+  .stat .lab{font-size:.78rem;color:var(--muted);margin-top:3px}
+
+  /* Swap hint */
+  .swap-hint{display:none;background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:.92rem;margin:-2px 0 12px}
+  .swap-hint.show{display:block}
+  .swap-hint strong{color:var(--accent)}
+
+  /* Entry lists */
+  .entries{list-style:none;margin:0;padding:0}
+  .entries li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+  .entries li:first-child{border-top:none;padding-top:2px}
+  .entries .main{flex:1;min-width:0}
+  .entries .title{font-weight:650;overflow-wrap:anywhere}
+  .entries .meta{color:var(--muted);font-size:.86rem}
+  .entries .swapline{font-size:.86rem;color:var(--accent);margin-top:2px}
+  .empty{color:var(--muted);font-size:.92rem;padding:6px 0 2px}
+  .meal-tag{display:inline-block;background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:1px 9px;font-size:.76rem;font-weight:700;text-transform:capitalize;margin-right:6px}
+
+  /* Duration chips */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .chips button{min-height:40px;padding:4px 14px;border-radius:999px}
+  .chips button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+  /* Charts */
+  .chart-wrap{width:100%;overflow:hidden}
+  svg.chart{width:100%;height:auto;display:block}
+  .chart-stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;font-size:.93rem}
+  .chart-stats b{font-size:1.05rem}
+  .bars{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:10px}
+  .bars .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;min-width:0}
+  .bars .bar{width:100%;max-width:30px;background:var(--bar);border-radius:4px 4px 0 0;min-height:3px}
+  .bars .bar.zero{background:var(--bar-empty)}
+  .bars .dlab{font-size:.64rem;color:var(--muted);white-space:nowrap}
+  .bars .vlab{font-size:.68rem;font-weight:700}
+
+  /* Backup */
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .btnrow button{flex:1 1 150px}
+  .note{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-ink);border-radius:10px;padding:11px 13px;font-size:.9rem;margin-bottom:14px}
+  .import-box{border:1px dashed var(--line);border-radius:10px;padding:12px;margin-top:10px;display:none}
+  .import-box.show{display:block}
+  .import-box .problems{background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:.87rem;max-height:180px;overflow:auto;margin:10px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+  .status{font-size:.9rem;margin-top:8px;min-height:1.3em}
+  .status.ok{color:var(--accent);font-weight:600}
+  .status.err{color:var(--danger);font-weight:600}
+  input[type="file"]{padding:8px}
+  .divider{border:none;border-top:1px solid var(--line);margin:16px 0}
+
+  /* Other sites */
+  .sites{display:grid;gap:10px}
+  @media (min-width:560px){.sites{grid-template-columns:1fr 1fr}}
+  .site-link{display:block;text-decoration:none;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:14px;min-height:44px}
+  .site-link .t{font-weight:700}
+  .site-link .d{color:var(--muted);font-size:.88rem;margin-top:2px}
+  footer{margin-top:22px;color:var(--muted);font-size:.85rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Fitness and Nutrition Tracker</h1>
+  <p class="sub">Log food, weight, and activity day by day. Entries are saved in this browser only, on this device. Use the backup section below to move entries or restore them after clearing browser data.</p>
+
+  <!-- Date navigation -->
+  <div class="datebar" role="group" aria-label="Choose a day">
+    <button type="button" class="navbtn" id="prevDay" aria-label="Previous day">← Prev</button>
+    <input type="date" id="datePicker" aria-label="Pick a date" />
+    <button type="button" class="navbtn" id="nextDay" aria-label="Next day">Next →</button>
+    <button type="button" class="navbtn" id="todayBtn">Today</button>
+    <div class="datenav-label" id="dateLabel"></div>
+  </div>
+
+  <!-- Day summary -->
+  <div class="summary" aria-label="Day summary">
+    <div class="stat"><div class="num" id="sumCal">0</div><div class="lab">Calories logged</div></div>
+    <div class="stat"><div class="num" id="sumAct">0</div><div class="lab">Activity minutes</div></div>
+    <div class="stat"><div class="num" id="sumWt">—</div><div class="lab">Weight (lbs)</div></div>
+  </div>
+
+  <!-- Food -->
+  <section class="card" aria-labelledby="foodH">
+    <h2 id="foodH">Food</h2>
+    <p class="hint">Add what was eaten for the selected day. A healthier swap is suggested as you type and is kept with the saved entry.</p>
+    <div class="grid c2">
+      <div class="field">
+        <label for="mealSel">Meal</label>
+        <select id="mealSel">
+          <option value="breakfast">Breakfast</option>
+          <option value="lunch">Lunch</option>
+          <option value="dinner">Dinner</option>
+          <option value="snack">Snack</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="foodName">Food</label>
+        <input type="text" id="foodName" placeholder="e.g. White rice" autocomplete="off" />
+      </div>
+    </div>
+    <div class="swap-hint" id="swapHint" aria-live="polite"></div>
+    <div class="grid c2">
+      <div class="field">
+        <label for="foodPortion">Portion <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <input type="text" id="foodPortion" placeholder="e.g. 1 cup" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="foodCal">Calories <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <input type="number" id="foodCal" inputmode="numeric" min="0" step="1" placeholder="e.g. 350" />
+      </div>
+    </div>
+    <button type="button" class="primary" id="addFood" style="width:100%">Add food</button>
+    <div class="status" id="foodStatus" aria-live="polite"></div>
+    <ul class="entries" id="foodList" style="margin-top:8px"></ul>
+    <p class="empty" id="foodEmpty">No food logged for this day yet.</p>
+  </section>
+
+  <!-- Weight -->
+  <section class="card" aria-labelledby="weightH">
+    <h2 id="weightH">Weight</h2>
+    <p class="hint">One weigh-in per day. Saving again for the same day replaces that day's weight.</p>
+    <div class="grid c2">
+      <div class="field">
+        <label for="weightInput">Weight (lbs)</label>
+        <input type="number" id="weightInput" inputmode="decimal" min="1" step="0.1" placeholder="e.g. 185" />
+      </div>
+      <div class="field" style="display:flex;align-items:flex-end">
+        <button type="button" class="primary" id="addWeight" style="width:100%">Save weight</button>
+      </div>
+    </div>
+    <div class="status" id="weightStatus" aria-live="polite"></div>
+    <ul class="entries" id="weightDayList"></ul>
+  </section>
+
+  <!-- Activity -->
+  <section class="card" aria-labelledby="actH">
+    <h2 id="actH">Activity</h2>
+    <p class="hint">Pick an activity type, a duration, and an intensity.</p>
+    <div class="grid c2">
+      <div class="field">
+        <label for="actType">Activity type</label>
+        <select id="actType">
+          <option>Walking</option>
+          <option>Running</option>
+          <option>Cycling</option>
+          <option>Swimming</option>
+          <option>Strength training</option>
+          <option>Yoga</option>
+          <option>Stretching</option>
+          <option>Gardening</option>
+          <option>Housework</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="actIntensity">Intensity</label>
+        <select id="actIntensity">
+          <option>Low</option>
+          <option selected>Moderate</option>
+          <option>High</option>
+        </select>
+      </div>
+    </div>
+    <label>Duration shortcuts (minutes)</label>
+    <div class="chips" id="durChips" role="group" aria-label="Duration shortcuts">
+      <button type="button" data-min="10">10</button>
+      <button type="button" data-min="15">15</button>
+      <button type="button" data-min="20">20</button>
+      <button type="button" data-min="30">30</button>
+      <button type="button" data-min="45">45</button>
+      <button type="button" data-min="60">60</button>
+      <button type="button" data-min="90">90</button>
+    </div>
+    <div class="field">
+      <label for="actDur">Duration (minutes)</label>
+      <input type="number" id="actDur" inputmode="numeric" min="1" step="1" placeholder="e.g. 30" />
+    </div>
+    <button type="button" class="primary" id="addActivity" style="width:100%">Add activity</button>
+    <div class="status" id="actStatus" aria-live="polite"></div>
+    <ul class="entries" id="actList" style="margin-top:8px"></ul>
+    <p class="empty" id="actEmpty">No activity logged for this day yet.</p>
+  </section>
+
+  <!-- Progress -->
+  <section class="card" aria-labelledby="progH">
+    <h2 id="progH">Progress</h2>
+
+    <h3 style="margin-top:10px">Weight trend</h3>
+    <div id="weightChartArea">
+      <div class="chart-wrap" id="weightChart"></div>
+      <div class="chart-stats" id="weightStats"></div>
+    </div>
+    <p class="empty" id="weightNone">No weigh-ins yet. Add a weight above to start the trend line.</p>
+
+    <hr class="divider" />
+
+    <h3>Activity — last 14 days</h3>
+    <div class="bars" id="actBars" aria-label="Activity minutes per day for the last 14 days"></div>
+    <div class="chart-stats" id="actStats"></div>
+
+    <hr class="divider" />
+
+    <h3>Recent food entries</h3>
+    <ul class="entries" id="recentFood"></ul>
+    <p class="empty" id="recentFoodEmpty">No food entries yet.</p>
+
+    <hr class="divider" />
+
+    <h3>Weigh-in history</h3>
+    <ul class="entries" id="weightHistory"></ul>
+    <p class="empty" id="weightHistoryEmpty">No weigh-ins yet.</p>
+  </section>
+
+  <!-- Backup -->
+  <section class="card" aria-labelledby="backupH">
+    <h2 id="backupH">Backup, export, and import</h2>
+    <p class="hint">Entries live only in this browser. Export a backup before clearing browser data, then import it afterwards to get everything back.</p>
+    <div class="note">If browser data is cleared without a backup, the entries on this device are gone. The JSON backup restores everything exactly. CSV files open in Excel and can also be imported back.</div>
+
+    <h3>JSON — full backup</h3>
+    <div class="btnrow">
+      <button type="button" id="exportJson">Export JSON backup</button>
+      <button type="button" id="importJsonBtn">Import JSON backup</button>
+    </div>
+    <input type="file" id="importJsonFile" accept=".json,application/json" style="display:none" />
+    <div class="import-box" id="jsonBox">
+      <p id="jsonBoxText"></p>
+      <div class="btnrow" style="margin-top:10px">
+        <button type="button" class="primary" id="jsonReplace">Replace everything with this backup</button>
+        <button type="button" id="jsonMerge">Add to existing entries</button>
+        <button type="button" class="ghost" id="jsonCancel">Cancel</button>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <h3>CSV — for Excel</h3>
+    <p class="hint" style="margin-bottom:10px">One file per type. Text fields are quoted, so commas in food names do not break the file.</p>
+    <div class="btnrow">
+      <button type="button" data-csv-export="food">Export food CSV</button>
+      <button type="button" data-csv-export="weight">Export weight CSV</button>
+      <button type="button" data-csv-export="activity">Export activity CSV</button>
+    </div>
+    <div class="btnrow">
+      <button type="button" data-csv-import="food">Import food CSV</button>
+      <button type="button" data-csv-import="weight">Import weight CSV</button>
+      <button type="button" data-csv-import="activity">Import activity CSV</button>
+    </div>
+    <input type="file" id="importCsvFile" accept=".csv,text/csv" style="display:none" />
+    <div class="import-box" id="csvBox">
+      <p id="csvBoxText"></p>
+      <div class="problems" id="csvProblems" style="display:none"></div>
+      <div class="btnrow" style="margin-top:10px">
+        <button type="button" class="primary" id="csvConfirm">Import the valid rows</button>
+        <button type="button" class="ghost" id="csvCancel">Cancel</button>
+      </div>
+    </div>
+
+    <div class="status" id="backupStatus" aria-live="polite"></div>
+
+    <hr class="divider" />
+    <button type="button" class="del" id="clearAll">Clear all entries on this device</button>
+    <div class="import-box" id="clearBox">
+      <p>This removes every food, weight, and activity entry saved in this browser. Export a backup first if the entries are needed later.</p>
+      <div class="btnrow" style="margin-top:10px">
+        <button type="button" id="clearConfirm" style="color:var(--danger)">Yes, clear everything</button>
+        <button type="button" class="ghost" id="clearCancel">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Other sites -->
+  <section class="card" aria-labelledby="sitesH">
+    <h2 id="sitesH">Other sites</h2>
+    <div class="sites" style="margin-top:10px">
+      <a class="site-link" href="https://ejyoungr-hash.github.io/moon/" target="_blank" rel="noopener">
+        <div class="t">The Moon</div>
+        <div class="d">Moon photos, facts, a quiz, and a phase memory game.</div>
+      </a>
+      <a class="site-link" href="https://ejyoungr-hash.github.io/daily-devotionals-for-men/" target="_blank" rel="noopener">
+        <div class="t">Daily Devotionals for Men</div>
+        <div class="d">Daily devotionals with passages in KJV, ESV, and NLT.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer>Entries are stored in this browser's local storage only. Nothing is sent to a server and nothing syncs between devices.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+var KEY = "fitness-tracker-netlify-v1";
+
+/* ---------- storage ---------- */
+function emptyData(){ return { food: [], weight: [], activity: [] }; }
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(!raw) return emptyData();
+    var d = JSON.parse(raw);
+    if(!d || !Array.isArray(d.food) || !Array.isArray(d.weight) || !Array.isArray(d.activity)) return emptyData();
+    return d;
+  }catch(e){ return emptyData(); }
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){ setStatus(backupStatus,"Could not save in this browser. Storage may be full or blocked.","err"); } }
+var data = load();
+
+/* ---------- helpers ---------- */
+function $(id){ return document.getElementById(id); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function pad(n){ return (n<10?"0":"")+n; }
+function toISO(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function todayISO(){ return toISO(new Date()); }
+function parseISO(s){
+  if(typeof s!=="string") return null;
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+  if(!m) return null;
+  var d = new Date(+m[1], +m[2]-1, +m[3]);
+  if(d.getFullYear()!==+m[1] || d.getMonth()!==+m[2]-1 || d.getDate()!==+m[3]) return null;
+  return d;
+}
+function fmtDate(iso){
+  var d = parseISO(iso); if(!d) return iso;
+  return d.toLocaleDateString(undefined,{weekday:"short", month:"short", day:"numeric", year:"numeric"});
+}
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});
+}
+function setStatus(el,msg,kind){ el.textContent = msg||""; el.className = "status"+(kind?" "+kind:""); }
+function download(filename, text, mime){
+  var blob = new Blob([text], {type: mime});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 300);
+}
+
+/* ---------- healthier swaps ---------- */
+var SWAPS = [
+  [["soda","cola","coke","pepsi","soft drink","energy drink"],"water or unsweetened sparkling water"],
+  [["orange juice","apple juice","juice"],"a whole piece of fruit, or water"],
+  [["white rice"],"brown rice"],
+  [["white bread","white toast"],"whole grain bread"],
+  [["french fries","fries","chips","potato chips","doritos","cheetos"],"baked potato wedges, or a small handful of nuts"],
+  [["fried chicken"],"grilled or baked chicken"],
+  [["bacon"],"turkey bacon, or a smaller portion"],
+  [["sausage"],"turkey or chicken sausage"],
+  [["ground beef","hamburger","burger","cheeseburger"],"lean ground turkey, or a smaller portion of lean beef"],
+  [["hot dog"],"a grilled chicken sandwich"],
+  [["pizza"],"thin-crust pizza with vegetable toppings, or one slice with a side salad"],
+  [["ice cream"],"Greek yogurt with berries"],
+  [["milkshake"],"a smoothie made with fruit and low-fat milk"],
+  [["candy","chocolate bar","skittles","gummy"],"a small handful of nuts or a piece of fruit"],
+  [["donut","doughnut","pastry","muffin","croissant"],"whole grain toast with peanut butter"],
+  [["pancake"],"oatmeal with fruit"],
+  [["waffle"],"oatmeal with fruit"],
+  [["sugary cereal","cereal"],"oatmeal, or a high-fiber low-sugar cereal"],
+  [["mayonnaise","mayo"],"mustard, or light mayonnaise"],
+  [["ranch dressing","ranch"],"a vinaigrette dressing"],
+  [["sour cream"],"plain Greek yogurt"],
+  [["whole milk"],"low-fat (1% or 2%) milk"],
+  [["butter"],"olive oil, used in a smaller amount"],
+  [["salted nuts","peanuts"],"unsalted nuts"],
+  [["beer","wine","whiskey","vodka","alcohol"],"water or sparkling water"],
+  [["latte","frappuccino","mocha"],"black coffee, or coffee with a splash of milk"],
+  [["sweet tea"],"unsweetened tea"],
+  [["lemonade"],"water with a squeeze of lemon"],
+  [["mashed potato"],"cauliflower mash, or a baked potato"],
+  [["pasta","spaghetti","noodles","macaroni"],"a smaller portion of pasta with added vegetables, or whole grain pasta"],
+  [["rice"],"brown rice or cauliflower rice"],
+  [["tortilla chips","nachos"],"vegetable sticks with salsa"],
+  [["cookie","cookies","cake","brownie","pie"],"a piece of fruit, or a smaller portion shared"],
+  [["granola bar","protein bar"],"a handful of nuts and a piece of fruit"],
+  [["creamer","sugar"],"a splash of milk, with less or no sugar"]
+];
+function getSwap(name){
+  var n = " " + String(name||"").toLowerCase() + " ";
+  for(var i=0;i<SWAPS.length;i++){
+    var keys = SWAPS[i][0];
+    for(var j=0;j<keys.length;j++){
+      if(n.indexOf(keys[j])!==-1) return SWAPS[i][1];
+    }
+  }
+  return "";
+}
+
+/* ---------- selected date ---------- */
+var selected = todayISO();
+var datePicker = $("datePicker"), dateLabel = $("dateLabel");
+function setSelected(iso){
+  if(!parseISO(iso)) iso = todayISO();
+  selected = iso;
+  datePicker.value = iso;
+  dateLabel.textContent = fmtDate(iso) + (iso===todayISO() ? " — Today" : "");
+  renderDay();
+}
+$("prevDay").addEventListener("click", function(){
+  var d = parseISO(selected); d.setDate(d.getDate()-1); setSelected(toISO(d));
+});
+$("nextDay").addEventListener("click", function(){
+  var d = parseISO(selected); d.setDate(d.getDate()+1); setSelected(toISO(d));
+});
+$("todayBtn").addEventListener("click", function(){ setSelected(todayISO()); });
+datePicker.addEventListener("change", function(){ if(datePicker.value) setSelected(datePicker.value); });
+
+/* ---------- food ---------- */
+var foodName=$("foodName"), foodPortion=$("foodPortion"), foodCal=$("foodCal"), mealSel=$("mealSel"),
+    swapHint=$("swapHint"), foodStatus=$("foodStatus"), foodList=$("foodList"), foodEmpty=$("foodEmpty");
+
+foodName.addEventListener("input", function(){
+  var s = getSwap(foodName.value);
+  if(s && foodName.value.trim()){
+    swapHint.innerHTML = "Healthier swap: <strong>"+esc(s)+"</strong>";
+    swapHint.classList.add("show");
+  } else {
+    swapHint.classList.remove("show"); swapHint.textContent="";
+  }
+});
+$("addFood").addEventListener("click", function(){
+  var name = foodName.value.trim();
+  if(!name){ setStatus(foodStatus,"Enter a food name first.","err"); foodName.focus(); return; }
+  var cal = foodCal.value==="" ? null : Number(foodCal.value);
+  if(cal!==null && (isNaN(cal) || cal<0)){ setStatus(foodStatus,"Calories must be a number of 0 or more.","err"); return; }
+  data.food.push({
+    id: uid(), date: selected, meal: mealSel.value, name: name,
+    portion: foodPortion.value.trim(), calories: cal, swap: getSwap(name)
+  });
+  save();
+  foodName.value=""; foodPortion.value=""; foodCal.value="";
+  swapHint.classList.remove("show"); swapHint.textContent="";
+  setStatus(foodStatus,"Food added for "+fmtDate(selected)+".","ok");
+  renderAll();
+});
+
+/* ---------- weight ---------- */
+var weightInput=$("weightInput"), weightStatus=$("weightStatus");
+$("addWeight").addEventListener("click", function(){
+  var v = Number(weightInput.value);
+  if(!weightInput.value || isNaN(v) || v<=0 || v>1500){ setStatus(weightStatus,"Enter a weight in lbs.","err"); weightInput.focus(); return; }
+  var existing = null;
+  for(var i=0;i<data.weight.length;i++){ if(data.weight[i].date===selected){ existing=data.weight[i]; break; } }
+  if(existing){ existing.weight = v; }
+  else { data.weight.push({ id: uid(), date: selected, weight: v }); }
+  save();
+  weightInput.value="";
+  setStatus(weightStatus,"Weight saved for "+fmtDate(selected)+".","ok");
+  renderAll();
+});
+
+/* ---------- activity ---------- */
+var actType=$("actType"), actIntensity=$("actIntensity"), actDur=$("actDur"), actStatus=$("actStatus"),
+    actList=$("actList"), actEmpty=$("actEmpty");
+$("durChips").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-min]"); if(!b) return;
+  actDur.value = b.getAttribute("data-min");
+  var chips = $("durChips").querySelectorAll("button");
+  for(var i=0;i<chips.length;i++) chips[i].classList.toggle("on", chips[i]===b);
+});
+actDur.addEventListener("input", function(){
+  var chips = $("durChips").querySelectorAll("button");
+  for(var i=0;i<chips.length;i++) chips[i].classList.toggle("on", chips[i].getAttribute("data-min")===actDur.value);
+});
+$("addActivity").addEventListener("click", function(){
+  var mins = Number(actDur.value);
+  if(!actDur.value || isNaN(mins) || mins<=0){ setStatus(actStatus,"Enter a duration in minutes, or tap a shortcut.","err"); actDur.focus(); return; }
+  data.activity.push({ id: uid(), date: selected, type: actType.value, duration: Math.round(mins), intensity: actIntensity.value });
+  save();
+  actDur.value="";
+  var chips = $("durChips").querySelectorAll("button");
+  for(var i=0;i<chips.length;i++) chips[i].classList.remove("on");
+  setStatus(actStatus,"Activity added for "+fmtDate(selected)+".","ok");
+  renderAll();
+});
+
+/* ---------- delete (event delegation) ---------- */
+document.addEventListener("click", function(e){
+  var b = e.target.closest("button[data-del]"); if(!b) return;
+  var kind = b.getAttribute("data-del"), id = b.getAttribute("data-id");
+  data[kind] = data[kind].filter(function(x){ return x.id!==id; });
+  save(); renderAll();
+});
+function delBtn(kind,id){ return '<button type="button" class="del" data-del="'+kind+'" data-id="'+esc(id)+'" aria-label="Delete entry">Delete</button>'; }
+
+/* ---------- rendering ---------- */
+function renderDay(){
+  /* food for day */
+  var foods = data.food.filter(function(f){ return f.date===selected; });
+  foodList.innerHTML = foods.map(function(f){
+    var meta = [];
+    if(f.portion) meta.push(esc(f.portion));
+    if(f.calories!=null && f.calories!=="") meta.push(f.calories+" cal");
+    return '<li><div class="main"><div class="title"><span class="meal-tag">'+esc(f.meal)+'</span>'+esc(f.name)+'</div>'+
+      (meta.length?'<div class="meta">'+meta.join(" · ")+'</div>':"")+
+      (f.swap?'<div class="swapline">Healthier swap: '+esc(f.swap)+'</div>':"")+
+      '</div>'+delBtn("food",f.id)+'</li>';
+  }).join("");
+  foodEmpty.style.display = foods.length? "none":"block";
+
+  /* weight for day */
+  var w = data.weight.filter(function(x){ return x.date===selected; });
+  $("weightDayList").innerHTML = w.map(function(x){
+    return '<li><div class="main"><div class="title">'+x.weight+' lbs</div><div class="meta">'+fmtDate(x.date)+'</div></div>'+delBtn("weight",x.id)+'</li>';
+  }).join("");
+
+  /* activity for day */
+  var acts = data.activity.filter(function(a){ return a.date===selected; });
+  actList.innerHTML = acts.map(function(a){
+    return '<li><div class="main"><div class="title">'+esc(a.type)+'</div><div class="meta">'+a.duration+' min · '+esc(a.intensity)+' intensity</div></div>'+delBtn("activity",a.id)+'</li>';
+  }).join("");
+  actEmpty.style.display = acts.length? "none":"block";
+
+  /* summary */
+  var calTotal = foods.reduce(function(s,f){ return s + (Number(f.calories)||0); },0);
+  $("sumCal").textContent = calTotal;
+  $("sumAct").textContent = acts.reduce(function(s,a){ return s + (Number(a.duration)||0); },0);
+  $("sumWt").textContent = w.length? w[0].weight : "—";
+}
+
+function renderProgress(){
+  /* weight trend */
+  var ws = data.weight.slice().sort(function(a,b){ return a.date<b.date?-1:1; });
+  var chartEl = $("weightChart"), statsEl = $("weightStats");
+  $("weightNone").style.display = ws.length? "none":"block";
+  $("weightChartArea").style.display = ws.length? "block":"none";
+  if(ws.length){
+    var first = ws[0], last = ws[ws.length-1];
+    var change = Math.round((last.weight - first.weight)*10)/10;
+    var changeTxt = (change>0?"+":"") + change + " lbs";
+    statsEl.innerHTML = "<span>Start: <b>"+first.weight+" lbs</b> ("+fmtDate(first.date)+")</span>"+
+      "<span>Latest: <b>"+last.weight+" lbs</b> ("+fmtDate(last.date)+")</span>"+
+      "<span>Change: <b>"+changeTxt+"</b></span>";
+    if(ws.length===1){
+      chartEl.innerHTML = '<p class="empty">One weigh-in so far. The trend line appears after a second weigh-in.</p>';
+    } else {
+      chartEl.innerHTML = weightSVG(ws);
+    }
+  } else { chartEl.innerHTML=""; statsEl.innerHTML=""; }
+
+  /* activity last 14 days ending today */
+  var days = [];
+  var now = new Date();
+  for(var i=13;i>=0;i--){
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate()-i);
+    var iso = toISO(d);
+    var mins = data.activity.filter(function(a){ return a.date===iso; })
+      .reduce(function(s,a){ return s+(Number(a.duration)||0); },0);
+    days.push({ iso: iso, mins: mins, label: (d.getMonth()+1)+"/"+d.getDate() });
+  }
+  var max = Math.max.apply(null, days.map(function(x){return x.mins;}).concat([1]));
+  $("actBars").innerHTML = days.map(function(x){
+    var h = Math.max(3, Math.round(x.mins/max*84));
+    return '<div class="col"><div class="vlab">'+(x.mins?x.mins:"")+'</div><div class="bar'+(x.mins?"":" zero")+'" style="height:'+h+'px" title="'+esc(fmtDate(x.iso))+": "+x.mins+' min"></div><div class="dlab">'+x.label+'</div></div>';
+  }).join("");
+  var last7 = days.slice(7);
+  var mins7 = last7.reduce(function(s,x){ return s+x.mins; },0);
+  var active7 = last7.filter(function(x){ return x.mins>0; }).length;
+  $("actStats").innerHTML = "<span>Last 7 days: <b>"+mins7+" minutes</b></span><span>Active days (last 7): <b>"+active7+" of 7</b></span><span>Last 14 days: <b>"+days.reduce(function(s,x){return s+x.mins;},0)+" minutes</b></span>";
+
+  /* recent food */
+  var recent = data.food.slice().sort(function(a,b){
+    if(a.date!==b.date) return a.date<b.date?1:-1;
+    return 0;
+  }).slice(0,10);
+  $("recentFood").innerHTML = recent.map(function(f){
+    var meta = [fmtDate(f.date), f.meal];
+    if(f.portion) meta.push(f.portion);
+    if(f.calories!=null && f.calories!=="") meta.push(f.calories+" cal");
+    return '<li><div class="main"><div class="title">'+esc(f.name)+'</div><div class="meta">'+esc(meta.join(" · "))+'</div>'+
+      (f.swap?'<div class="swapline">Healthier swap: '+esc(f.swap)+'</div>':"")+'</div></li>';
+  }).join("");
+  $("recentFoodEmpty").style.display = recent.length? "none":"block";
+
+  /* weigh-in history */
+  var hist = ws.slice().reverse();
+  $("weightHistory").innerHTML = hist.map(function(x){
+    return '<li><div class="main"><div class="title">'+x.weight+' lbs</div><div class="meta">'+fmtDate(x.date)+'</div></div></li>';
+  }).join("");
+  $("weightHistoryEmpty").style.display = hist.length? "none":"block";
+}
+
+function weightSVG(ws){
+  var W=720, H=220, PL=46, PR=14, PT=16, PB=30;
+  var min = Math.min.apply(null, ws.map(function(x){return x.weight;}));
+  var max = Math.max.apply(null, ws.map(function(x){return x.weight;}));
+  if(min===max){ min-=2; max+=2; }
+  var padAmt = (max-min)*0.15; min-=padAmt; max+=padAmt;
+  function X(i){ return PL + (W-PL-PR) * (ws.length===1?0.5:i/(ws.length-1)); }
+  function Y(v){ return PT + (H-PT-PB) * (1 - (v-min)/(max-min)); }
+  var pts = ws.map(function(x,i){ return X(i).toFixed(1)+","+Y(x.weight).toFixed(1); }).join(" ");
+  var out = '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Weight trend line chart">';
+  /* gridlines: min, mid, max of padded range labels use actual min/max weights */
+  var ticks = [min+padAmt, ( (min+padAmt)+(max-padAmt) )/2, max-padAmt];
+  // simpler: label actual lowest and highest weights
+  out += '<line x1="'+PL+'" y1="'+Y(ws.reduce(function(m,x){return Math.min(m,x.weight);},1e9))+'" x2="'+(W-PR)+'" y2="'+Y(ws.reduce(function(m,x){return Math.min(m,x.weight);},1e9))+'" stroke="var(--line)" stroke-width="1"/>';
+  out += '<line x1="'+PL+'" y1="'+Y(ws.reduce(function(m,x){return Math.max(m,x.weight);},-1e9))+'" x2="'+(W-PR)+'" y2="'+Y(ws.reduce(function(m,x){return Math.max(m,x.weight);},-1e9))+'" stroke="var(--line)" stroke-width="1"/>';
+  out += '<text x="2" y="'+(Y(ws.reduce(function(m,x){return Math.max(m,x.weight);},-1e9))+4)+'" font-size="12" fill="var(--muted)">'+ws.reduce(function(m,x){return Math.max(m,x.weight);},-1e9)+'</text>';
+  out += '<text x="2" y="'+(Y(ws.reduce(function(m,x){return Math.min(m,x.weight);},1e9))+4)+'" font-size="12" fill="var(--muted)">'+ws.reduce(function(m,x){return Math.min(m,x.weight);},1e9)+'</text>';
+  out += '<polyline fill="none" stroke="var(--accent)" stroke-width="2.5" points="'+pts+'"/>';
+  ws.forEach(function(x,i){
+    out += '<circle cx="'+X(i)+'" cy="'+Y(x.weight)+'" r="4" fill="var(--accent)"><title>'+esc(fmtDate(x.date))+": "+x.weight+' lbs</title></circle>';
+  });
+  out += '<text x="'+PL+'" y="'+(H-8)+'" font-size="12" fill="var(--muted)">'+esc(ws[0].date)+'</text>';
+  var lastTxt = esc(ws[ws.length-1].date);
+  out += '<text x="'+(W-PR)+'" y="'+(H-8)+'" font-size="12" fill="var(--muted)" text-anchor="end">'+lastTxt+'</text>';
+  out += '</svg>';
+  return out;
+}
+
+function renderAll(){ renderDay(); renderProgress(); }
+
+/* ---------- JSON export / import ---------- */
+var backupStatus = $("backupStatus");
+$("exportJson").addEventListener("click", function(){
+  var payload = { app:"fitness-and-nutrition-tracker", version:1, exportedAt:new Date().toISOString(), food:data.food, weight:data.weight, activity:data.activity };
+  download("fitness-tracker-backup-"+todayISO()+".json", JSON.stringify(payload,null,2), "application/json");
+  setStatus(backupStatus,"JSON backup downloaded. Keep the file somewhere safe.","ok");
+});
+
+var pendingJson = null;
+$("importJsonBtn").addEventListener("click", function(){ $("importJsonFile").click(); });
+$("importJsonFile").addEventListener("change", function(){
+  var file = this.files && this.files[0]; this.value="";
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    try{
+      var d = JSON.parse(String(reader.result));
+      if(!d || !Array.isArray(d.food) || !Array.isArray(d.weight) || !Array.isArray(d.activity)) throw new Error("bad");
+      pendingJson = {
+        food: d.food.filter(validFoodJson),
+        weight: d.weight.filter(validWeightJson),
+        activity: d.activity.filter(validActivityJson)
+      };
+      var total = pendingJson.food.length+pendingJson.weight.length+pendingJson.activity.length;
+      if(total===0){ setStatus(backupStatus,"That file has no entries this tracker can read.","err"); pendingJson=null; return; }
+      $("jsonBoxText").textContent = "This backup holds "+pendingJson.food.length+" food, "+pendingJson.weight.length+" weight, and "+pendingJson.activity.length+" activity entries. Replace removes everything currently saved here first. Add keeps current entries and adds the backup's entries.";
+      $("jsonBox").classList.add("show");
+      setStatus(backupStatus,"","");
+    }catch(e){ setStatus(backupStatus,"That file could not be read as a tracker backup.","err"); }
+  };
+  reader.readAsText(file);
+});
+function normFood(f){ return { id: f.id||uid(), date:f.date, meal:String(f.meal||"snack"), name:String(f.name||""), portion:String(f.portion||""), calories:(f.calories===""||f.calories==null?null:Number(f.calories)), swap:String(f.swap||"") }; }
+function normWeight(w){ return { id: w.id||uid(), date:w.date, weight:Number(w.weight) }; }
+function normActivity(a){ return { id: a.id||uid(), date:a.date, type:String(a.type||"Other"), duration:Number(a.duration), intensity:String(a.intensity||"Moderate") }; }
+function validFoodJson(f){ return f && parseISO(f.date) && typeof f.name==="string" && f.name.trim()!==""; }
+function validWeightJson(w){ return w && parseISO(w.date) && !isNaN(Number(w.weight)) && Number(w.weight)>0; }
+function validActivityJson(a){ return a && parseISO(a.date) && !isNaN(Number(a.duration)) && Number(a.duration)>0; }
+$("jsonReplace").addEventListener("click", function(){
+  if(!pendingJson) return;
+  data = { food: pendingJson.food.map(normFood), weight: pendingJson.weight.map(normWeight), activity: pendingJson.activity.map(normActivity) };
+  save(); pendingJson=null; $("jsonBox").classList.remove("show");
+  setStatus(backupStatus,"Backup restored. All entries now match the imported file.","ok");
+  renderAll();
+});
+$("jsonMerge").addEventListener("click", function(){
+  if(!pendingJson) return;
+  var seen = {};
+  data.food.concat(data.weight, data.activity).forEach(function(x){ seen[x.id]=1; });
+  function fresh(x){ if(seen[x.id]) x.id = uid(); seen[x.id]=1; return x; }
+  data.food = data.food.concat(pendingJson.food.map(normFood).map(fresh));
+  data.weight = data.weight.concat(pendingJson.weight.map(normWeight).map(fresh));
+  data.activity = data.activity.concat(pendingJson.activity.map(normActivity).map(fresh));
+  save(); pendingJson=null; $("jsonBox").classList.remove("show");
+  setStatus(backupStatus,"Backup entries added to the existing entries.","ok");
+  renderAll();
+});
+$("jsonCancel").addEventListener("click", function(){ pendingJson=null; $("jsonBox").classList.remove("show"); setStatus(backupStatus,"Import cancelled. Nothing was changed.",""); });
+
+/* ---------- CSV helpers ---------- */
+function csvQuote(v){
+  var s = String(v==null?"":v);
+  return '"' + s.replace(/"/g,'""') + '"';
+}
+function toCSV(headers, rows){
+  var lines = [headers.map(csvQuote).join(",")];
+  rows.forEach(function(r){ lines.push(r.map(csvQuote).join(",")); });
+  return "\uFEFF" + lines.join("\r\n") + "\r\n";
+}
+function parseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF) text = text.slice(1);
+  var rows=[], row=[], cur="", inQ=false, i, c;
+  for(i=0;i<text.length;i++){
+    c = text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){ cur+='"'; i++; } else inQ=false; }
+      else cur+=c;
+    } else {
+      if(c==='"') inQ=true;
+      else if(c===","){ row.push(cur); cur=""; }
+      else if(c==="\n"){ row.push(cur); rows.push(row); row=[]; cur=""; }
+      else if(c==="\r"){ /* skip */ }
+      else cur+=c;
+    }
+  }
+  if(cur!=="" || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(function(r){ return !(r.length===1 && r[0].trim()===""); });
+}
+
+var CSV_DEFS = {
+  food: {
+    headers: ["date","meal","food","portion","calories","healthier_swap"],
+    filename: "fitness-food",
+    rows: function(){ return data.food.slice().sort(byDate).map(function(f){ return [f.date,f.meal,f.name,f.portion||"", (f.calories==null?"":f.calories), f.swap||""]; }); },
+    validate: function(cells){
+      if(cells.length<3) return "Not enough columns. Expected: date, meal, food, portion, calories, healthier_swap.";
+      var date=cells[0].trim(), meal=cells[1].trim().toLowerCase(), name=cells[2].trim();
+      if(!parseISO(date)) return "Date \""+cells[0]+"\" is not a valid date (use YYYY-MM-DD).";
+      if(["breakfast","lunch","dinner","snack"].indexOf(meal)===-1) return "Meal \""+cells[1]+"\" must be breakfast, lunch, dinner, or snack.";
+      if(!name) return "Food name is empty.";
+      var calTxt=(cells[4]||"").trim(), cal=null;
+      if(calTxt!==""){ cal=Number(calTxt); if(isNaN(cal)||cal<0) return "Calories \""+calTxt+"\" is not a valid number."; }
+      return { entry:{ id:uid(), date:date, meal:meal, name:name, portion:(cells[3]||"").trim(), calories:cal, swap:(cells[5]||"").trim() || getSwap(name) } };
+    }
+  },
+  weight: {
+    headers: ["date","weight_lbs"],
+    filename: "fitness-weight",
+    rows: function(){ return data.weight.slice().sort(byDate).map(function(w){ return [w.date, w.weight]; }); },
+    validate: function(cells){
+      if(cells.length<2) return "Not enough columns. Expected: date, weight_lbs.";
+      var date=cells[0].trim(), v=Number((cells[1]||"").trim());
+      if(!parseISO(date)) return "Date \""+cells[0]+"\" is not a valid date (use YYYY-MM-DD).";
+      if(isNaN(v)||v<=0||v>1500) return "Weight \""+cells[1]+"\" is not a valid weight in lbs.";
+      return { entry:{ id:uid(), date:date, weight:v } };
+    }
+  },
+  activity: {
+    headers: ["date","activity","duration_minutes","intensity"],
+    filename: "fitness-activity",
+    rows: function(){ return data.activity.slice().sort(byDate).map(function(a){ return [a.date, a.type, a.duration, a.intensity]; }); },
+    validate: function(cells){
+      if(cells.length<3) return "Not enough columns. Expected: date, activity, duration_minutes, intensity.";
+      var date=cells[0].trim(), type=cells[1].trim(), dur=Number((cells[2]||"").trim()), inten=(cells[3]||"Moderate").trim();
+      if(!parseISO(date)) return "Date \""+cells[0]+"\" is not a valid date (use YYYY-MM-DD).";
+      if(!type) return "Activity type is empty.";
+      if(isNaN(dur)||dur<=0) return "Duration \""+cells[2]+"\" is not a valid number of minutes.";
+      if(["Low","Moderate","High"].indexOf(inten)===-1) inten = "Moderate";
+      return { entry:{ id:uid(), date:date, type:type, duration:Math.round(dur), intensity:inten } };
+    }
+  }
+};
+function byDate(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); }
+
+document.addEventListener("click", function(e){
+  var ex = e.target.closest("button[data-csv-export]");
+  if(ex){
+    var kind = ex.getAttribute("data-csv-export"), def = CSV_DEFS[kind];
+    var rows = def.rows();
+    if(!rows.length){ setStatus(backupStatus,"No "+kind+" entries to export yet.","err"); return; }
+    download(def.filename+"-"+todayISO()+".csv", toCSV(def.headers, rows), "text/csv");
+    setStatus(backupStatus, kind.charAt(0).toUpperCase()+kind.slice(1)+" CSV downloaded ("+rows.length+" rows). It opens in Excel.","ok");
+    return;
+  }
+  var im = e.target.closest("button[data-csv-import]");
+  if(im){
+    pendingCsvKind = im.getAttribute("data-csv-import");
+    $("importCsvFile").click();
+  }
+});
+
+var pendingCsvKind = null, pendingCsvEntries = null;
+$("importCsvFile").addEventListener("change", function(){
+  var file = this.files && this.files[0]; this.value="";
+  if(!file || !pendingCsvKind) return;
+  var kind = pendingCsvKind, def = CSV_DEFS[kind];
+  var reader = new FileReader();
+  reader.onload = function(){
+    var rows = parseCSV(String(reader.result||""));
+    if(!rows.length){ setStatus(backupStatus,"That CSV file appears to be empty.","err"); return; }
+    /* skip header row if it matches expected headers */
+    var first = rows[0].map(function(c){ return c.trim().toLowerCase(); });
+    var startIdx = 0;
+    var headerMatch = def.headers.every(function(h,i){ return first[i]===h; });
+    if(headerMatch) startIdx = 1;
+    var entries=[], problems=[];
+    for(var i=startIdx;i<rows.length;i++){
+      var res = def.validate(rows[i]);
+      if(typeof res==="string") problems.push("Row "+(i+1)+": "+res);
+      else entries.push(res.entry);
+    }
+    pendingCsvEntries = entries;
+    $("csvBoxText").textContent = "Checked the "+kind+" file: "+entries.length+" row(s) are valid and ready to import. "+
+      (problems.length? problems.length+" row(s) have problems and will be skipped. Existing entries are not changed or overwritten — imported rows are added."
+                      : "No problems found. Existing entries are not changed — imported rows are added.");
+    var probEl = $("csvProblems");
+    if(problems.length){ probEl.textContent = problems.join("\n"); probEl.style.display="block"; }
+    else probEl.style.display="none";
+    $("csvConfirm").disabled = entries.length===0;
+    $("csvBox").classList.add("show");
+    setStatus(backupStatus,"","");
+  };
+  reader.readAsText(file);
+});
+$("csvConfirm").addEventListener("click", function(){
+  if(!pendingCsvKind || !pendingCsvEntries) return;
+  var kind = pendingCsvKind;
+  if(kind==="weight"){
+    /* keep one weigh-in per date: imported row replaces that date's entry */
+    pendingCsvEntries.forEach(function(en){
+      data.weight = data.weight.filter(function(w){ return w.date!==en.date; });
+      data.weight.push(en);
+    });
+  } else {
+    data[kind] = data[kind].concat(pendingCsvEntries);
+  }
+  var n = pendingCsvEntries.length;
+  save();
+  pendingCsvEntries=null; pendingCsvKind=null;
+  $("csvBox").classList.remove("show");
+  setStatus(backupStatus,"Imported "+n+" "+kind+" row(s).","ok");
+  renderAll();
+});
+$("csvCancel").addEventListener("click", function(){
+  pendingCsvEntries=null; pendingCsvKind=null;
+  $("csvBox").classList.remove("show");
+  setStatus(backupStatus,"Import cancelled. Nothing was changed.","");
+});
+
+/* ---------- clear all ---------- */
+$("clearAll").addEventListener("click", function(){ $("clearBox").classList.add("show"); });
+$("clearCancel").addEventListener("click", function(){ $("clearBox").classList.remove("show"); });
+$("clearConfirm").addEventListener("click", function(){
+  data = emptyData(); save();
+  $("clearBox").classList.remove("show");
+  setStatus(backupStatus,"All entries on this device were cleared.","ok");
+  renderAll();
+});
+
+/* ---------- init ---------- */
+setSelected(todayISO());
+renderAll();
+})();
+</script>
+</body>
+</html>
